@@ -33,8 +33,9 @@ bool euclidianPattern[NUMBER_OF_STEPS+1];
 uint8_t stepCounter;
 uint8_t numberOfSteps;
 uint8_t numberOfFills = 6;
+uint8_t numberOfrepeats = 0;
 
-//#define TEST 1
+#define TEST 1
 
 // Uncomment to perform a test play of the instruments and drums on power up
 //#define SOUND_CHECK 1
@@ -42,8 +43,15 @@ uint8_t numberOfFills = 6;
 // Uncomment this if you have a test LED
 // Note: The LED_BUILTIN for the Uno is on pin 13,
 //       which is used below for the VS1003 link.
-#define MIDI_LED1 4
-#define MIDI_LED2 5
+//#define MIDI_LED1 4
+//#define MIDI_LED2 5
+
+
+// button pins digita
+#define B2_PIN 2
+#define B3_PIN 3
+
+
 // This code supports several variants of the VS10xx based shields.
 // Choose the apprppriate one here (and comment out the others).
 //
@@ -72,12 +80,13 @@ uint16_t MIDI_CHANNEL_FILTER = 0b1111111111111111;
 
 // Comment out any of these if not in use
 //#define POT_MIDI  A0 // MIDI control
-#define POT_VOL   A3 // Volume control
+//#define POT_VOL   A3 // Volume control
 
 // POTs to control which set of drums and tempo
-#define POT_KIT   A2
-#define POT_TEMPO A0
-#define POT_FILLS A1    
+#define POT_TEMPO   A0
+#define POT_FILLS   A1 
+#define POT_KIT     A2   
+#define POT_REPEATS A3   
 
 // Channel to link to the potentiometer (1 to 16)
 #define POT_MIDI_CHANNEL 10
@@ -152,7 +161,7 @@ byte instrument;
 char teststr[32];
 #endif
 
-#define KIT 4
+#define KIT 5
 
 #define VS1003_D_BASS     35   // 35 36 86 87
 #define VS1003_D_SNARE    38   // 38 40
@@ -173,6 +182,7 @@ int kits[KIT][13]={
   { 35, 38, 35, 42, 42, 43, 38, 51, 46, 64, 75, 70, 42 }, // not bad
   { 35, 38, 42, 40, 64, 42, 70, 42, 46, 62, 64, 35, 42 }, // little more on the snare side/ HH, lo & hi conga, and maracas
   { 35, 38, 42, 42, 35, 42, 64, 42, 46, 38, 75, 64, 42 }, // little more on the snare side/ HH, lo conga, one clave hit
+  { 42, 75, 42, 75, 42, 75, 42, 42, 42, 42, 42, 42, 42 }, // click
   }; // Bass, Snare, HHO, HHC
 
 int kit = 0;
@@ -181,12 +191,20 @@ int kit = 0;
 
 
 void setup() {
+
+  // initialize the pushbuttons on rampart as an input:
+  pinMode(B2_PIN, INPUT);
+  pinMode(B3_PIN, INPUT);
   
-//#ifndef TEST
+#ifdef TEST
   Serial.begin(9600);
   Serial.println ("Initialising VS10xx");
-//#endif // TEST
+#endif // TEST
 
+  // put your setup code here, to run once:
+  initialiseVS10xx();
+
+/*
 #ifdef VS_VCC
   pinMode(VS_VCC, OUTPUT);
   digitalWrite(VS_VCC, HIGH);
@@ -204,7 +222,7 @@ void setup() {
     digitalWrite(MIDI_LED1, LOW);
     delay(100);
   }
-#endif // MIDI_LED
+#endif // MIDI_LED1
 #ifdef MIDI_LED2
   pinMode(MIDI_LED2, OUTPUT);
   // flash the LED on startup
@@ -214,10 +232,9 @@ void setup() {
     digitalWrite(MIDI_LED2, LOW);
     delay(100);
   }
-#endif // MIDI_LED
+#endif // MIDI_LED2
+*/
 
-  // put your setup code here, to run once:
-  initialiseVS10xx();
 
   // This listens to all MIDI channels
   // They will be filtered out later...
@@ -239,12 +256,6 @@ void setup() {
       //delay (500);
   }
 #endif // SOUND_CHECK
-
-#ifndef TEST
-  Serial.println ("Step");
-  Serial.println ( getCurrentStep() );
-  Serial.println ( getStepNumber() );
-#endif   
 
   // Configure the instruments for all required MIDI channels.
   // Even though MIDI channels are 1 to 16, all the code here
@@ -284,25 +295,11 @@ generateSequence(8, 31);
 
 
 }
-/* from the euclidiean attiny
 
-  uint8_t analogPins[3]={A1,A2,A3};
-  uint8_t _xor;
-  int _val;
-  uint8_t counter;
-  bool clkState;
-  bool rstState;
-  uint8_t address=0;
-  uint8_t steps,fills, lastSteps, lastFills;
-  bool butState;
-  uint8_t clkCounter;
-  bool usePin[4]={  true,false,true,true };
-*/
-
-
-
-uint8_t steps, fills, lastSteps, lastFills;
-bool butState;
+uint8_t steps, fills, lastSteps, lastFills, repeats ;
+uint8_t currentRepeat = 0;
+bool bState1, bState2;
+bool swing = 0;
 uint8_t clkCounter = 0;
 uint8_t instrs;
 uint8_t timings;
@@ -321,47 +318,52 @@ void loop() {
   // the next "tick" happening.
   unsigned long timenow = millis();
   if (timenow >= nexttick) {
-    nexttick = millis() + (unsigned long)(1000/(tempo/60))/24.0;
-    //currentTime = micros();
-    //midIntervall = (1000/(bpm/60.0))/24.0;//set the midi clock using ref to bpm
-      
-     //if ((currentTime - pastTime) > midIntervall*1000) {
-     // usbMIDI.sendRealTime(CLOCK);
-      
-    //Serial.println ( nexttick );
-    //Serial.println ( timenow );
+    nexttick = millis() + (unsigned long)(1000/(tempo/60))/24.0; 
+    
     // check if we've hit the end of a 32 step pattern
     // if so, new pattern. reset counter.
-    
     if ( clkCounter == 31) {
-      //instrument = random(15) + 8;
-      digitalWrite(MIDI_LED2, HIGH);
-      generateSequence(numberOfFills, 31);
-      clkCounter = 0;
-    } else {
-      digitalWrite(MIDI_LED2, LOW);
+      if (currentRepeat == repeats){
+        generateSequence(numberOfFills, 31);
+        clkCounter = 0;
+        currentRepeat = 0;
+        //Serial.println("new pattern");
+        
+      }
+    } 
+    if (clkCounter == 31){
+      currentRepeat++;
+      
 
-    }
+      //Serial.print("incr repeat: ");
+      //Serial.println(currentRepeat);
 
+
+
+    } 
+    
+    // update / play sound if currentstep is on
     if (getCurrentStep() ) {
-
       int rr = random(13); // should use length of [kit]
       int note = kits[kit][rr];
       //Serial.println ( note);
-      //int note = random(45)+30;
-      // we're addding a bit of randomness to velocity
-      digitalWrite(MIDI_LED1, HIGH);
-      talkMIDI (0x99, note, 127 - (random(20)));
-      //delay (100);
+       // we're addding a bit of randomness to velocity
+      int vel= 127 - random(20);
+      if (note ==75) { vel = 70 ; }
+      talkMIDI (0x99, note, vel);
+      
+      //swing a bit but not too much
+      if (swing) { 
+        delay (random(30)); 
+        Serial.println("swinging");
+        }
+      
       talkMIDI (0x89, note, 0);
       //delay (50);
-    } else {
-      digitalWrite(MIDI_LED1, LOW);
     }
     // generate the current step 0/1, increment counter
     doStep();
-    clkCounter++;
-    
+    clkCounter++; 
   }
   
   if (loopstate == 0) {
@@ -377,34 +379,99 @@ void loop() {
 #endif // POT_KIT
 
 #ifdef POT_FILLS
-    int pot3 = map(analogRead(POT_FILLS), 0, 1023, 2, 17);
+    int pot3 = map(analogRead(POT_FILLS), 0, 1023, 4, 16);
     if (pot3 != numberOfFills) {
       numberOfFills = pot3;  // Number of fills 4-16
+      // reset repeats
+      currentRepeat = 0;
     }
-    
-#endif // POT_TEMPO
+#endif // POT_FILLS
   }
 
-
   else if (loopstate == 1) {
+    
 #ifdef POT_TEMPO
-    // Read the potentiometer for a value between 0 and 255.
-    // This will be converted into a delay to be used to control the tempo.
-    //int pot1 = 20 + (analogRead (POT_TEMPO) >> 2);
-    int pot1 = map(analogRead(POT_TEMPO), 0, 1023, 40, 320);
+    int pot1 = map(analogRead(POT_TEMPO), 0, 1023, 60, 240);
     if (pot1 != tempo) {
       tempo = pot1;  // Tempo range is 20 to 275.
-      // Reset the tick on changing the tempo
-      //      nexttick = 0;
     }
-
 #endif // POT_TEMPO
 
+  } 
+  else if (loopstate == 2) {
+
+#ifdef POT_REPEATS
+    int pot2 = map(analogRead(POT_REPEATS), 0, 1023, 0, 33);
+    if (pot2 != repeats) {
+      repeats = pot2;  // 0 to 32 repeats
+      currentRepeat = 0;
+    }
+#endif // POT_REPEATS
+
+#ifdef TEST
+/*
+  Serial.print ("KIT: ");
+  Serial.println ( kit);
+
+  //Serial.print ("REPEATS: ");
+  //Serial.println ( repeats);
+  //Serial.print ("CURREPEAT: ");
+  //Serial.println ( currentRepeat);
+  //Serial.println ("");
+  Serial.print ("TEMPO: ");
+  Serial.println ( tempo);
+  Serial.print ("FILLS: ");
+  Serial.println ( numberOfFills);
+*/ 
+#endif
+
+  }
+  loopstate++;
+  if (loopstate > 2) loopstate = 0;
 
 
-  } else 
-  if (loopstate == 2) {
+    // this is TOGGLE logic.
+    // button handling for number of steps
+    static int previous1, previous2;
+    int current1 = digitalRead(B2_PIN); 
+    int current2 = digitalRead(B3_PIN);
     
+    if (previous1 == LOW && current1 == HIGH) {
+      if (bState1 == 1) {
+        bState1 = 0;
+        swing = 0;
+      } else {
+        bState1 = 1;
+        swing = 1;
+      }
+      //Serial.println("But1");
+      //Serial.println(bState1);
+    }
+    previous1 = current1;
+    if ( bState1 == 0 ) {
+      
+    } else if ( bState1 == 1 ) {
+
+    }  
+    
+    if (previous2 == LOW && current2 == HIGH) {
+      if (bState2 == 1) {
+        bState2 = 0;
+      } else {
+        bState2 = 1;
+      }
+      Serial.println("But2");
+      Serial.println(bState2);
+    }
+    previous2 = current2;
+    if ( bState2 == 0 ) {
+      //updateWavePacket();
+    } else if ( bState2 == 1 ) {
+      //updateFM();
+
+    }
+
+/*    
 #ifdef POT_VOL
   // Need a value between 0 and 254 for the volume
   byte pot2 = analogRead (POT_VOL) >> 2;
@@ -422,23 +489,7 @@ void loop() {
     VSWriteRegister(SCI_VOL, 254-pot2, 254-pot2);
     volume = pot2;
   }
-#endif // POT_VOL
-
-
-#ifdef TEST
-  //Serial.println ("TEMPO");
-  Serial.println ( tempo);
-  //Serial.println ("KIT");
-  Serial.println ( kit);
-  Serial.println ("FILLS");
-  Serial.println ( numberOfFills);
-#endif
-
-  }
-  loopstate++;
-  if (loopstate > 2) loopstate = 0;
-
-
+#endif // POT_VOL*/
 
 
 }
