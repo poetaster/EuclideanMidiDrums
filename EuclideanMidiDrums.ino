@@ -4,12 +4,13 @@
   Copyright (c) 2024 blueprint@poetaster.de (Mark Washeim)
   some parts Copyright (c) 2020 diyelectromusic (Kevin)
 
-  MIT license. 
+  GPLv3 See LICENSE distributed with this file.
   
   Much of the code and inspiration is from Kevin
-  Simple DIY Electronic Music Projects - diyelectromusic.wordpress.com
+  Simple DIY Electronic Music Projects - https://diyelectromusic.wordpress.com
 
   The euclidean rythm code is from https://bastl-instruments.com/ the one chip modules
+  https://github.com/bastl-instruments/one-chip-modules
 
   This uses a generic VS1003 or VS1053 MP3 Player board utilising
   VS10xx software patching to provide a robust "real time MIDI" mode
