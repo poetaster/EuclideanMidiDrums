@@ -381,7 +381,7 @@ void loop() {
 #endif // POT_KIT
 
 #ifdef POT_FILLS
-    int pot3 = map(analogRead(POT_FILLS), 0, 1023, 4, 16);
+    int pot3 = map(analogRead(POT_FILLS), 0, 1023, 2, 16);
     if (pot3 != numberOfFills) {
       numberOfFills = pot3;  // Number of fills 4-16
       // reset repeats
@@ -393,7 +393,7 @@ void loop() {
   else if (loopstate == 1) {
     
 #ifdef POT_TEMPO
-    int pot1 = map(analogRead(POT_TEMPO), 0, 1023, 60, 240);
+    int pot1 = map(analogRead(POT_TEMPO), 0, 1023, 0, 240);
     if (pot1 != tempo) {
       tempo = pot1;  // Tempo range is 20 to 275.
     }
@@ -692,7 +692,7 @@ void initialiseVS10xx () {
   VSStatus();
 
   // Set the default volume
-  //  VSWriteRegister(SCI_VOL, 0x20, 0x20);  // 0 = Maximum; 0xFEFE = silence
+  VSWriteRegister(SCI_VOL, 0, 0);  // 0 = Maximum; 0xFEFE = silence
   VSStatus();
 }
 
