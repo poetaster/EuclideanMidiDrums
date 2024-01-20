@@ -35,7 +35,7 @@ uint8_t numberOfSteps;
 uint8_t numberOfFills = 6;
 uint8_t numberOfrepeats = 0;
 
-#define TEST 1
+//#define TEST 1
 
 // Uncomment to perform a test play of the instruments and drums on power up
 //#define SOUND_CHECK 1
@@ -161,7 +161,7 @@ byte instrument;
 char teststr[32];
 #endif
 
-#define KIT 5
+#define KIT 7
 
 #define VS1003_D_BASS     35   // 35 36 86 87
 #define VS1003_D_SNARE    38   // 38 40
@@ -178,11 +178,13 @@ char teststr[32];
 #define VS1003_D_CLAVES   75   // 28 31 32 33 37 56 67 68 75 76 77 83 84 85
 
 int kits[KIT][13]={
-  { 64, 38, 42, 46, 35, 38, 64, 46, 42, 62, 64, 62, 42 }, // not bad
-  { 35, 38, 35, 42, 42, 43, 38, 51, 46, 64, 75, 70, 42 }, // not bad
+  { 42, 38, 46, 42, 46, 35, 42, 46, 46, 35, 38, 46, 38 }, // clicks snare bass
+  { 35, 38, 42, 46, 35, 38, 42, 46, 42, 62, 64, 64, 42 }, // not bad
+  { 35, 38, 35, 42, 42, 43, 38, 70, 46, 64, 75, 70, 42 }, // not bad
   { 35, 38, 42, 40, 64, 42, 70, 42, 46, 62, 64, 35, 42 }, // little more on the snare side/ HH, lo & hi conga, and maracas
-  { 35, 38, 42, 42, 35, 42, 64, 42, 46, 38, 75, 64, 42 }, // little more on the snare side/ HH, lo conga, one clave hit
-  { 42, 75, 42, 75, 42, 75, 42, 42, 42, 42, 42, 42, 42 }, // click
+  { 35, 38, 42, 38, 35, 42, 64, 42, 46, 38, 75, 64, 42 }, // little more on the snare side/ HH, lo conga, one clave hit
+  { 46, 38, 46, 42, 46, 70, 42, 46, 46, 70, 46, 46, 38 }, // clicks snare maracas
+  { 42, 75, 42, 75, 42, 75, 42, 42, 42, 42, 42, 42, 42 }, // clicks
   }; // Bass, Snare, HHO, HHC
 
 int kit = 0;
@@ -349,13 +351,13 @@ void loop() {
       //Serial.println ( note);
        // we're addding a bit of randomness to velocity
       int vel= 127 - random(20);
-      if (note ==75) { vel = 70 ; }
+      if (note == 75 || note == 57) { vel = 90 ; }
       talkMIDI (0x99, note, vel);
       
       //swing a bit but not too much
       if (swing) { 
         delay (random(30)); 
-        Serial.println("swinging");
+        //Serial.println("swinging");
         }
       
       talkMIDI (0x89, note, 0);
@@ -372,7 +374,7 @@ void loop() {
     // for POT_MIDI_CHANNEL (if POT_MIDI is defined).
     
 #ifdef POT_KIT
-    int pot0 = map(analogRead(POT_KIT), 0, 1023, 0, KIT);
+    int pot0 = map(analogRead(POT_KIT), 0, 1023, 0, KIT-1);
     if (pot0 != kit) {
       kit = pot0;
     }    
@@ -409,10 +411,10 @@ void loop() {
 #endif // POT_REPEATS
 
 #ifdef TEST
-/*
+
   Serial.print ("KIT: ");
   Serial.println ( kit);
-
+/*
   //Serial.print ("REPEATS: ");
   //Serial.println ( repeats);
   //Serial.print ("CURREPEAT: ");
